@@ -1,4 +1,4 @@
-# Face Recognition Project using Face-API
+# Face recognition using Face-API
 
 This project implements face detection and recognition using the face-api.js library. 
 
@@ -9,7 +9,7 @@ This project implements face detection and recognition using the face-api.js lib
  - Facial Expressions
  - Real-time Video 
 
-## Technologies Used
+## Technologies
  - face-api.js
  - JavaScript
  - HTML/CSS
