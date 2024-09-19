@@ -1,5 +1,6 @@
 
 const cam = document.getElementById('cam');
+let canvasCam, canvasSize, getFaceName = null;
 
 const getMedia = async (constraints) => {
     let stream = null;
@@ -10,6 +11,20 @@ const getMedia = async (constraints) => {
   } catch (err) {
   }
 }
+
+const addListerner = cam.addEventListener('play', async () => {
+        canvasCam = faceapi.createCanvasFromMedia(cam);
+        canvasSize = {
+            width: cam.width,
+            height: cam.height
+        }
+        getFaceName = await loadFaceNames();
+
+        faceapi.matchDimensions(canvasCam, canvasSize);
+        document.body.append(canvasCam)
+        
+        requestAnimationFrame(startDetection)
+    })
 
 const loadFaceNames = () => {
     const nameFace = ['Bruno', 'Patricia', 'Gabriel']
@@ -28,37 +43,30 @@ const loadFaceNames = () => {
     }))
 }
 
-const addListerner = () => {
-    cam.addEventListener('play', async () => {
-        const canvasCam = faceapi.createCanvasFromMedia(cam);
-        const canvasSize = {
-            width: cam.width,
-            height: cam.height
-        }
-        const getFaceName = await loadFaceNames();
+const clearCanvas = (canvas) => {
+    canvas.getContext('2d').clearRect(0,0,canvas.width, canvas.height);
+}
 
-        faceapi.matchDimensions(canvasCam, canvasSize)
-        document.body.append(canvasCam)
-
-        setInterval(async () => {
+const startDetection =  async ()  => {
+           
             const detections  = await faceapi.detectAllFaces(cam, new faceapi.TinyFaceDetectorOptions())
                 .withFaceLandmarks()
                 .withFaceExpressions()
                 .withAgeAndGender()
                 .withFaceDescriptors();
 
-            const resizeDetections =  await faceapi.resizeResults(detections, canvasSize);
+            const resizeDetections = await faceapi.resizeResults(detections, canvasSize);
             const faceMatcher = new faceapi.FaceMatcher(getFaceName,60)
-            const results = resizeDetections.map( d => {
+            const facesLabels = resizeDetections.map( d => {
                 return faceMatcher.findBestMatch(d.descriptor)
             });
+    
+            clearCanvas(canvasCam);
 
-            
-
-            canvasCam.getContext('2d').clearRect(0,0,canvasCam.width, canvasCam.height)
             faceapi.draw.drawDetections(canvasCam, resizeDetections);
             faceapi.draw.drawFaceLandmarks(canvasCam, resizeDetections);
             faceapi.draw.drawFaceExpressions(canvasCam, resizeDetections, 0.05);
+            
             resizeDetections.forEach(detection => {
                 const { age, gender, genderProbability } = detection;
                 new faceapi.draw.DrawTextField([
@@ -66,16 +74,16 @@ const addListerner = () => {
                     `${gender} (${parseInt(genderProbability * 100, 10)}%)`
                 ], detection.detection.box.topRight).draw(canvasCam)
             })
-            results.forEach((result, index) => {
+
+            facesLabels.forEach((result, index) => {
                 const box = resizeDetections[index].detection.box
                 const { label, distance} = result
                 new faceapi.draw.DrawTextField([
-                    `${label} (${parseInt(distance *100, 10)})`
+                    `${label} (${parseInt(distance *100, 10)}%)`
                 ], box.bottomRight).draw(canvasCam)
             })
-        }, 100);
 
-    })
+            requestAnimationFrame(startDetection)
 }
 
 Promise.all([
